@@ -1,0 +1,85 @@
+node {
+    def buildResult
+try{
+   
+   def server = Artifactory.server 'Artifactory'
+   def rtMaven = Artifactory.newMavenBuild()
+   def buildInfo
+   
+   stage('Checkout') { 
+   checkout([$class: 'GitSCM', branches: [[name: '*/master']], 
+   doGenerateSubmoduleConfigurations: false, 
+   extensions: [], submoduleCfg: [], 
+   userRemoteConfigs: [[credentialsId: '3072d0ac-debb-4ff2-a540-fea521955938', 
+   url: 'https://gitlab.com/Ajay15/spring-hibernate-201.git']]])
+   }
+   
+    stage('--------- Artifactory configuration ----------------') {
+  /*
+  JFrog artifactory configuration
+  */
+  rtMaven.tool = 'M2_HOME' // Tool name from Jenkins configuration
+  rtMaven.deployer releaseRepo: 'libs-release-local', snapshotRepo: 'libs-snapshot-local', server: server
+  buildInfo = Artifactory.newBuildInfo()
+  buildInfo.env.capture = true
+ }
+   
+ stage('---------- mvn-clean-install and push to artifactory  ---------------') {
+ rtMaven.run pom: 'Spring201' + '/' + '/pom.xml', goals: 'clean install', buildInfo: buildInfo
+ }
+ 
+  stage('----------- Publish build info -------------') {
+  /*
+  Publishing build info to Artifcatory (JFrog)
+  */
+  server.publishBuildInfo buildInfo
+ }
+ 
+      stage('code quality Analysis'){
+       withSonarQubeEnv('sonarqube') {
+            dir('Spring201'){
+                    sh 'mvn sonar:sonar'
+       }
+       }
+       def qg = waitForQualityGate()
+              if (qg.status != 'OK') {
+                  currentBuild.result = 'FAILURE'
+                  error "Pipeline aborted due to quality gate failure: ${qg.status}"
+              }
+          
+      }
+      
+      stage('slave-build'){
+          build 'Jenkins201_QA'
+      }
+}
+catch(exception){
+  print exception
+  print 'IN CATCH BLOCK'
+		// If the job was aborted by any user
+        if (exception instanceof InterruptedException) {
+            print 'INSIDE IF BLOCK'
+           buildResult  = "ABORTED"
+           print '${buildResult}'
+        }
+		// If the job failed due to some error
+        else{
+            buildResult ="FAILURE"
+        }
+        
+        throw exception 
+}
+finally {
+  print 'IN FINALLY BLOCK'
+  print "$buildResult"
+   if(buildResult == 'ABORTED' || buildResult == 'FAILURE' ){
+        print 'IN EMAIL BLOCK'
+emailext (
+                        subject: "Jenkins Job '${JOB_NAME} with build no ${BUILD_NUMBER} failed'",
+                        body: """<p>Check console output at <a href="${JOB_URL}">${JOB_NAME}</a></p>""",
+                        to: "ajay.j2@mindtree.com",
+                        from: '"Jenkins" <ajay333cool@gmail.com>'
+                    )
+}
+}
+}

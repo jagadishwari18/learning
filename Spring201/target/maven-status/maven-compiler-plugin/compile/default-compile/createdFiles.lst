@@ -1,0 +1,16 @@
+io\spring201\configuration\SpringRootConfig.class
+io\spring201\entity\PropertyTax.class
+io\spring201\dao\PropertyTaxDao.class
+io\spring201\dto\ZoneReport.class
+io\spring201\exception\GobalExceptionHandler.class
+io\spring201\service\PropertyTaxService.class
+io\spring201\dao\PropertyTaxDaoImpl.class
+io\spring201\entity\PropertyType.class
+io\spring201\configuration\SpringWebConfig.class
+io\spring201\controller\PropertyTaxController.class
+io\spring201\entity\PropertyZone.class
+io\spring201\service\TaxService.class
+io\spring201\entity\ZoneUav.class
+io\spring201\entity\PropertyStatus.class
+io\spring201\configuration\AppInitilizer.class
+io\spring201\entity\PropertyDetails.class
